@@ -14,6 +14,9 @@ let lastJob = null;
 let viewMode = 'grid';
 let undoAvailable = false;
 let geminiConfigured = false;
+let suppressCardClick = false;
+const HISTORY_CLEARED_KEY = 'dreamsync.historyClearedAt';
+const LAST_UPLOAD_KEY = 'dreamsync.lastUpload';
 
 // API Helper
 async function api(url, opts = {}) {
@@ -232,6 +235,10 @@ function renderCard(i) {
 function wireCards() {
   $$('.card').forEach(c => {
     c.addEventListener('click', e => {
+      if (suppressCardClick) {
+        suppressCardClick = false;
+        return;
+      }
       if (e.shiftKey || e.ctrlKey || e.metaKey) {
         toggleSelect(c.dataset.path);
       } else if (c.dataset.folder === 'true') {
@@ -350,6 +357,12 @@ function showUploadDone(items) {
   $('#drawerClose').disabled = false;
   $('#uploadBar').style.width = '100%';
   $('#uploadPercent').textContent = '100%';
+  localStorage.setItem(LAST_UPLOAD_KEY, JSON.stringify({
+    count: items.length,
+    names: items.slice(0, 5).map(item => item.originalName || item.name),
+    totalSize: items.reduce((sum, item) => sum + (item.size || 0), 0),
+    uploadedAt: new Date().toISOString()
+  }));
   toast(items.length + ' item' + (items.length > 1 ? 's' : '') + ' uploaded to 00_INBOX');
 }
 
@@ -429,7 +442,8 @@ function renderAIBar(d, pct, cur, total, completed) {
 function renderHistory(d) {
   const rows = (d.history || []).slice(0, 15);
   $('#history').innerHTML = rows.length ? rows.map(r =>
-    '<div class="history-item"><strong>' + esc(r.name || r.originalName) + '</strong><small>' +
+    '<div class="history-item"><div class="history-row"><strong>' + esc(r.name || r.originalName) + '</strong>' +
+    '<button class="ghost btn-sm history-location" data-history-path="' + esc(r.destination || pathDir(r.path || '00_INBOX')) + '">Location</button></div><small>' +
     (r.status === 'organized' ? 'Moved to ' + esc(r.destination || 'archive') : 'Error: ' + esc(r.error || 'unknown')) +
     ' \u00B7 ' + fmtTime(r.organizedAt || r.receivedAt) + '</small></div>'
   ).join('') : '<div class="selection-info">No AI moves yet.</div>';
@@ -439,8 +453,11 @@ async function loadPersistentHistory() {
   if (!activeProject) return;
   try {
     const d = await api('/api/vault/' + activeProject + '/history');
-    $('#history').innerHTML = d.items.length ? d.items.slice(0, 15).map(r =>
-      '<div class="history-item"><strong>' + esc(r.originalName || r.name) + '</strong><small>' +
+    const clearedAt = Number(localStorage.getItem(HISTORY_CLEARED_KEY) || 0);
+    const items = d.items.filter(r => new Date(r.organizedAt || r.receivedAt).getTime() > clearedAt);
+    $('#history').innerHTML = items.length ? items.slice(0, 15).map(r =>
+      '<div class="history-item"><div class="history-row"><strong>' + esc(r.originalName || r.name) + '</strong>' +
+      '<button class="ghost btn-sm history-location" data-history-path="' + esc(r.destination || pathDir(r.path || '00_INBOX')) + '">Location</button></div><small>' +
       (r.destination ? 'Moved to ' + esc(r.destination) : 'Received in ' + esc(r.path || 'inbox')) +
       ' \u00B7 ' + fmtTime(r.organizedAt || r.receivedAt) +
       (r.manual ? ' \u00B7 manual override' : '') + '</small></div>'
@@ -593,11 +610,13 @@ function installMarquee() {
       $$('.card').forEach(c => c.classList.remove('selected'));
     }
     start = { x: e.clientX, y: e.clientY };
+    suppressCardClick = false;
     marquee = document.createElement('div');
     marquee.className = 'marquee';
     document.body.appendChild(marquee);
     const move = ev => {
       if (!start) return;
+      if (Math.abs(ev.clientX - start.x) > 4 || Math.abs(ev.clientY - start.y) > 4) suppressCardClick = true;
       const x = Math.min(start.x, ev.clientX), y = Math.min(start.y, ev.clientY);
       const w = Math.abs(ev.clientX - start.x), h = Math.abs(ev.clientY - start.y);
       Object.assign(marquee.style, { left: x+'px', top: y+'px', width: w+'px', height: h+'px' });
@@ -620,6 +639,24 @@ function installMarquee() {
   });
 }
 
+async function clearHistory() {
+  localStorage.setItem(HISTORY_CLEARED_KEY, String(Date.now()));
+  await loadPersistentHistory();
+}
+
+function showVisitUploadSummary() {
+  const raw = localStorage.getItem(LAST_UPLOAD_KEY);
+  if (!raw) return;
+  try {
+    const upload = JSON.parse(raw);
+    const names = upload.names?.join(', ');
+    $('#visitSummaryMessage').textContent = upload.count + ' file' + (upload.count === 1 ? '' : 's') +
+      ' uploaded on ' + fmtTime(upload.uploadedAt) + (names ? ': ' + names : '.') +
+      (upload.count > 5 ? ' and more.' : '.');
+    openModal('visitSummaryModal');
+  } catch { localStorage.removeItem(LAST_UPLOAD_KEY); }
+}
+
 // Keyboard Shortcuts
 function installKeyboard() {
   document.addEventListener('keydown', e => {
@@ -628,7 +665,7 @@ function installKeyboard() {
       $('#searchInput').focus();
     }
     if (e.key === 'Escape') {
-      ['moveModal', 'folderModal', 'projectModal', 'deleteProjectModal'].forEach(closeModal);
+      ['moveModal', 'folderModal', 'projectModal', 'deleteProjectModal', 'visitSummaryModal'].forEach(closeModal);
       $('#smartResults').classList.add('hidden');
     }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
@@ -689,6 +726,9 @@ async function init() {
   $('#projectConfirm').onclick = createProject;
   $('#deleteProjectBtn').onclick = requestDeleteProject;
   $('#deleteProjectConfirm').onclick = deleteProject;
+  $('#clearHistoryBtn').onclick = clearHistory;
+  $('#visitSummaryCancel').onclick = () => { localStorage.removeItem(LAST_UPLOAD_KEY); closeModal('visitSummaryModal'); };
+  $('#visitSummaryOpen').onclick = () => { localStorage.removeItem(LAST_UPLOAD_KEY); closeModal('visitSummaryModal'); openPath('00_INBOX'); };
 
   $('#moveSelected').onclick = openMoveModal;
   $('#moveConfirm').onclick = moveSelectedItems;
@@ -701,6 +741,8 @@ async function init() {
     if (pathBtn && pathBtn.closest('#treeNav')) openPath(pathBtn.dataset.path);
     const close = e.target.closest('[data-close]');
     if (close) closeModal(close.dataset.close);
+    const location = e.target.closest('[data-history-path]');
+    if (location) openPath(location.dataset.historyPath);
   });
 
   $('#searchInput').oninput = e => {
@@ -729,6 +771,7 @@ async function init() {
   } catch {}
 
   await loadProjects();
+  showVisitUploadSummary();
 }
 
 init().catch(e => { console.error(e); toast(e.message); });

@@ -128,7 +128,7 @@
       </section>
 
       <section class="panel-card">
-        <div class="panel-head"><span>RECENT ACTIVITY</span></div>
+        <div class="panel-head"><span>RECENT ACTIVITY</span><button id="clearHistoryBtn" class="ghost btn-sm">Clear</button></div>
         <div id="history" class="history"></div>
       </section>
 
@@ -177,6 +177,20 @@
       <div class="modal-foot">
         <button data-close="deleteProjectModal" class="ghost">Cancel</button>
         <button id="deleteProjectConfirm" class="danger">Delete permanently</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="visitSummaryModal" class="modal hidden">
+    <div class="modal-card small">
+      <div class="modal-head">
+        <h2>Recent upload</h2>
+        <button data-close="visitSummaryModal" class="icon-button">×</button>
+      </div>
+      <div id="visitSummaryMessage" class="modal-message"></div>
+      <div class="modal-foot">
+        <button id="visitSummaryCancel" class="ghost">Cancel</button>
+        <button id="visitSummaryOpen" class="primary">Open Inbox</button>
       </div>
     </div>
   </div>

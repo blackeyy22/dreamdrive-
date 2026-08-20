@@ -244,7 +244,7 @@ kbd {
 .file-header p { font-size: .72rem; color: var(--muted); margin-top: 3px; }
 .file-view-tools { display: flex; gap: 5px; }
 
-.vault-grid { min-height: 420px; }
+.vault-grid { min-height: 420px; user-select: none; }
 .grid-inner { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
 
 .card {
@@ -348,6 +348,9 @@ kbd {
 .history-item { padding: 8px 0; border-bottom: 1px solid var(--line); }
 .history-item:last-child { border-bottom: 0; }
 .history-item strong { display: block; font-size: .69rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-row { display: flex; align-items: center; gap: 6px; }
+.history-row strong { flex: 1; min-width: 0; }
+.history-location { flex: 0 0 auto; min-height: 25px; padding: 3px 6px; font-size: .59rem; }
 .history-item small { display: block; color: var(--muted); font-size: .62rem; line-height: 1.35; margin-top: 3px; }
 .selection-info { font-size: .7rem; color: var(--muted); line-height: 1.4; }
 .selection-actions { display: flex; gap: 6px; margin-top: 10px; }
