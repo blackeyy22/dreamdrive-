@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DreamSync — Production Archive</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand-block">
+      <div class="brand-mark">DS</div>
+      <div>
+        <div class="eyebrow">PRODUCTION ARCHIVE</div>
+        <h1>DreamSync</h1>
+        <div class="brand-sub">Media workspace</div>
+      </div>
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input id="searchInput" placeholder="Search files, folders and content..." aria-label="Search">
+      <kbd>Ctrl K</kbd>
+    </div>
+    <div class="header-actions">
+      <span id="aiBadge" class="status-pill muted">AI checking...</span>
+      <button id="undoBtn" class="ghost" title="Undo last move (Ctrl+Z)">↩ Undo</button>
+      <button id="newProjectBtn" class="secondary">New production</button>
+    </div>
+  </header>
+
+  <section id="aiProgress" class="ai-progress-panel hidden">
+    <div class="ai-progress-main">
+      <div class="ai-spark">✦</div>
+      <div class="ai-progress-copy">
+        <strong id="aiProgressTitle">AI organizer</strong>
+        <span id="aiProgressFile">Waiting...</span>
+      </div>
+      <span id="aiProgressPercent">0%</span>
+    </div>
+    <div class="progress-track"><i id="aiProgressBar"></i></div>
+    <div class="ai-progress-meta">
+      <span id="aiProgressStatus">Idle</span>
+      <span id="aiProgressDestination">—</span>
+    </div>
+  </section>
+
+  <main class="app-shell">
+    <aside class="sidebar card-shell">
+      <div class="side-block project-block">
+        <label>Production</label>
+        <select id="projectSelect"></select>
+        <button id="deleteProjectBtn" class="danger project-delete">Delete production</button>
+      </div>
+      <nav class="drive-nav">
+        <button class="nav-item active" data-path="00_INBOX">
+          <span>▣</span><span>Inbox</span><b id="inboxCount">0</b>
+        </button>
+        <div class="nav-label">ARCHIVE</div>
+        <div id="treeNav"></div>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="vault-status">
+          <span class="status-dot ready"></span>
+          <div><strong>DreamSync Vault</strong><small>Local production archive</small></div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="workspace">
+      <div class="drive-toolbar">
+        <div class="breadcrumbs">
+          <button id="upBtn" class="icon-button" title="Go up">←</button>
+          <strong id="locationLabel">00_INBOX</strong>
+        </div>
+        <div class="toolbar-actions">
+          <button id="newFolderBtn" class="secondary">＋ Folder</button>
+          <button id="uploadBtn" class="primary">↑ Upload</button>
+          <button id="organizeBtn" class="ai-button">✦ Organize with AI</button>
+        </div>
+      </div>
+
+      <section id="dropZone" class="dropzone">
+        <input id="fileInput" type="file" multiple hidden>
+        <input id="folderInput" type="file" webkitdirectory directory multiple hidden>
+        <div class="drop-icon">↑</div>
+        <div class="drop-copy">
+          <strong>Drop files or a folder here</strong>
+          <span>Upload completes first. AI organizes only after the files are safely in the Inbox.</span>
+          <div class="drop-actions">
+            <button id="chooseFiles" class="ghost">Choose files</button>
+            <button id="chooseFolder" class="ghost">Choose folder</button>
+          </div>
+        </div>
+        <div class="drop-limit">20 GB / file</div>
+      </section>
+
+      <div id="smartResults" class="smart-results hidden"></div>
+
+      <div class="file-header">
+        <div>
+          <h2 id="crumbTitle">00_INBOX</h2>
+          <p id="crumbPath">Everything uploaded is visible here before AI moves it.</p>
+        </div>
+        <div class="file-view-tools">
+          <button class="icon-button view active" data-view="grid" title="Grid view">▦</button>
+          <button class="icon-button view" data-view="list" title="List view">☷</button>
+          <button id="refreshBtn" class="icon-button" title="Refresh">↻</button>
+        </div>
+      </div>
+
+      <section id="grid" class="vault-grid"></section>
+    </section>
+
+    <aside class="inspector">
+      <section class="panel-card">
+        <div class="panel-head">
+          <span>INGEST</span>
+          <span id="jobState" class="status-dot idle"></span>
+        </div>
+        <div class="ingest-steps">
+          <div class="step done"><b>1</b><span>Uploaded</span></div>
+          <div class="step-line"></div>
+          <div id="flowAi" class="step"><b>2</b><span>AI sorting</span></div>
+          <div class="step-line"></div>
+          <div class="step"><b>3</b><span>Archived</span></div>
+        </div>
+      </section>
+
+      <section class="panel-card">
+        <div class="panel-head"><span>RECENT ACTIVITY</span></div>
+        <div id="history" class="history"></div>
+      </section>
+
+      <section class="panel-card">
+        <div class="panel-head"><span>SELECTED</span></div>
+        <div id="selectionInfo" class="selection-info">Click a file, or drag a rectangle over files.</div>
+        <div class="selection-actions">
+          <button id="moveSelected" class="ghost" disabled>Move</button>
+          <button id="downloadSelected" class="ghost" disabled>Download</button>
+          <button id="tagSelected" class="ghost" disabled>Tag</button>
+          <button id="deleteSelected" class="danger" disabled>Delete</button>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <div id="uploadDrawer" class="drawer hidden">
+    <div class="drawer-backdrop"></div>
+    <div class="drawer-inner">
+      <div class="drawer-head">
+        <div>
+          <div class="eyebrow">UPLOAD RECEIPT</div>
+          <h2 id="uploadTitle">Receiving...</h2>
+        </div>
+        <span id="uploadBadge" class="status-chip">UPLOADING</span>
+      </div>
+      <div id="uploadList" class="upload-list"></div>
+      <div class="upload-total">
+        <div><span>TRANSFER</span><strong id="uploadPercent">0%</strong></div>
+        <div class="track"><i id="uploadBar"></i></div>
+      </div>
+      <div class="drawer-foot">
+        <span id="uploadMessage">Copying to Inbox...</span>
+        <button id="drawerClose" class="secondary" disabled>Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="deleteProjectModal" class="modal hidden">
+    <div class="modal-card small">
+      <div class="modal-head">
+        <h2>Delete production</h2>
+        <button data-close="deleteProjectModal" class="icon-button">×</button>
+      </div>
+      <p id="deleteProjectMessage" class="modal-message"></p>
+      <div class="modal-foot">
+        <button data-close="deleteProjectModal" class="ghost">Cancel</button>
+        <button id="deleteProjectConfirm" class="danger">Delete permanently</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="moveModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>Move selected to</h2>
+        <button data-close="moveModal" class="icon-button">×</button>
+      </div>
+      <div id="moveTree" class="modal-tree"></div>
+      <div class="modal-foot">
+        <button data-close="moveModal" class="ghost">Cancel</button>
+        <button id="moveConfirm" class="primary">Move here</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="folderModal" class="modal hidden">
+    <div class="modal-card small">
+      <div class="modal-head">
+        <h2>New folder</h2>
+        <button data-close="folderModal" class="icon-button">×</button>
+      </div>
+      <label>Folder name<input id="folderName" placeholder="e.g. DAY 03 CAMERA"></label>
+      <div class="modal-foot">
+        <button data-close="folderModal" class="ghost">Cancel</button>
+        <button id="folderConfirm" class="primary">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="projectModal" class="modal hidden">
+    <div class="modal-card small">
+      <div class="modal-head">
+        <h2>New production</h2>
+        <button data-close="projectModal" class="icon-button">×</button>
+      </div>
+      <label>Production name<input id="projectName" placeholder="e.g. Project Aurora"></label>
+      <div class="modal-foot">
+        <button data-close="projectModal" class="ghost">Cancel</button>
+        <button id="projectConfirm" class="primary">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "dreamsync-vault",
+  "version": "3.0.0",
+  "description": "DreamSync - AI-powered production archive manager for film/video teams",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1",
+    "cors": "^2.8.5"
+  },
+  "keywords": ["production", "archive", "film", "video", "AI", "gemini"],
+  "license": "MIT"
+}
